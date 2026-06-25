@@ -51,6 +51,10 @@ export class RoomScene extends Phaser.Scene {
     this.rim = this.add.rectangle(W / 2, 0, W, 110, hex(PAL.bulb), 0.08).setOrigin(0.5, 0);
     this.rim.setBlendMode(Phaser.BlendModes.ADD);
 
+    // warm full-room swell, pulsed on the kick (the room breathing with the music)
+    this.breath = this.add.rectangle(W / 2, H / 2, W, H, hex(PAL.bulbHot), 0)
+      .setBlendMode(Phaser.BlendModes.ADD).setDepth(5.5);
+
     for (const z of ZONES) this.#drawZone(z);
 
     this.#drawVignette();
@@ -393,14 +397,17 @@ export class RoomScene extends Phaser.Scene {
     if (this.rim) this.rim.setAlpha(0.05 + v * 0.32);
   }
 
-  // pump the room on the kick: producer bounces, active gear flares, bulbs pulse
+  // pump the room on the kick: producer performs, active gear flares, bulbs + light pulse
   #onBeat(i) {
     if ((i % 4) !== 0) return; // react on the quarter-note kick
     const actives = Object.values(this.markers).filter((m) => m.ring.getData('on'));
     if (actives.length === 0) return; // only when something is playing
 
     if (this.avatar) {
-      this.tweens.add({ targets: this.avatar, scaleY: 1.6, duration: 80, yoyo: true, ease: 'Quad.out' });
+      // play harder + turn toward the instrument the producer is actually on
+      const perform = this.nearZone && this.markers[this.nearZone]?.ring.getData('on');
+      if (perform) this.avatar.setFlipX(ZONE_BY_ID[this.nearZone].at.x < this.avatarPos.x);
+      this.tweens.add({ targets: this.avatar, scaleY: perform ? 1.46 : 1.62, duration: 90, yoyo: true, ease: 'Quad.out' });
     }
     for (const m of actives) {
       this.tweens.add({ targets: m.spot, alpha: 0.8, duration: 90, yoyo: true, ease: 'Quad.out' });
@@ -408,5 +415,6 @@ export class RoomScene extends Phaser.Scene {
     for (const halo of this.bulbs || []) {
       this.tweens.add({ targets: halo, alpha: 0.3, duration: 90, yoyo: true, ease: 'Quad.out' });
     }
+    if (this.breath) this.tweens.add({ targets: this.breath, alpha: 0.045, duration: 100, yoyo: true, ease: 'Quad.out' });
   }
 }
