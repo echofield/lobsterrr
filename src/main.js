@@ -18,6 +18,8 @@ import { startKeyboardSource } from './sources/keyboardSource.js';
 import { startPointerSource } from './sources/pointerSource.js';
 import { enableCamera } from './sources/gestureSource.js';
 import { VstView } from './views/vstView.js';
+import { CreatorView } from './views/creatorView.js';
+import { loadCharacter, hydrate } from './character/model.js';
 
 const W = 960, H = 600;
 
@@ -59,6 +61,21 @@ const game = new Phaser.Game({
 startKeyboardSource();
 game.events.once('ready', () => {
   startPointerSource(game.canvas, hitTest);
+});
+
+// ── character: create-on-first-visit, then place the producer in the room ──
+const creator = new CreatorView();
+const room = () => game.scene.getScene('room');
+function enterStudio(ch) { room()?.showAvatar(hydrate(ch)); }
+
+game.events.once('ready', () => {
+  const saved = loadCharacter();
+  if (saved) enterStudio(saved);
+  else creator.open(null, enterStudio);
+});
+
+document.getElementById('edit-btn')?.addEventListener('click', () => {
+  creator.open(loadCharacter(), enterStudio);
 });
 
 // ── camera: strictly opt-in, behind the button (M2 wires gestureSource) ──

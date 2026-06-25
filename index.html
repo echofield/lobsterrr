@@ -59,6 +59,74 @@
     .vst-body.placeholder { text-align: center; padding: 40px 10px; color: var(--ink); }
     .vst-body.placeholder .dim { color: #9a8f80; font-size: 13px; margin-top: 8px; }
     .vst-body.placeholder b { color: var(--amber); }
+
+    /* ── character creation ── */
+    #edit-btn { position: fixed; right: 14px; top: 12px; font: inherit; font-size: 11px;
+      letter-spacing: .12em; text-transform: uppercase; color: #9a8f80;
+      background: rgba(232,162,75,.05); border: 1px solid rgba(232,162,75,.28);
+      border-radius: 2px; padding: 6px 11px; cursor: pointer; z-index: 40; }
+    #edit-btn:hover { color: var(--ink); border-color: rgba(232,162,75,.5); }
+    #creator { position: fixed; inset: 0; z-index: 60; display: none;
+      background: linear-gradient(rgba(18,10,8,.9), rgba(8,5,4,.97)), url('/panels/studio.jpg');
+      background-size: cover; background-position: center;
+      align-items: center; justify-content: center; }
+    #creator.on { display: flex; }
+    .cr-frame { width: min(860px, 94vw); background: rgba(18,12,10,.86);
+      border: 1px solid rgba(232,162,75,.3); border-radius: 7px; padding: 26px 30px 20px;
+      box-shadow: 0 30px 90px rgba(0,0,0,.65); backdrop-filter: blur(7px); }
+    .cr-frame header { margin-bottom: 20px; }
+    .cr-title { font-size: 19px; letter-spacing: .32em; text-transform: uppercase; color: var(--amber); }
+    .cr-sub { font-size: 11px; letter-spacing: .1em; color: #9a8f80; margin-top: 6px; }
+    .cr-body { display: grid; grid-template-columns: 230px 1fr; gap: 30px; align-items: start; }
+    .cr-stage { display: flex; flex-direction: column; align-items: center; gap: 16px;
+      background: rgba(8,5,4,.5); border: 1px solid rgba(232,162,75,.14); border-radius: 5px;
+      padding: 20px 10px; }
+    .cr-avatar { height: 250px; display: grid; place-items: end center; }
+    .cr-avatar canvas { display: block; filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)); }
+    .cr-name { width: 100%; font: inherit; font-size: 13px; letter-spacing: .14em; text-align: center;
+      text-transform: uppercase; color: var(--ink); background: rgba(0,0,0,.3);
+      border: 1px solid rgba(232,162,75,.3); border-radius: 3px; padding: 9px 8px; outline: none; }
+    .cr-name:focus { border-color: var(--amber); }
+    .cr-name::placeholder { color: #6f6557; letter-spacing: .1em; }
+    .cr-controls { display: flex; flex-direction: column; gap: 13px; }
+    .cr-row { display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid rgba(236,231,218,.08); padding-bottom: 11px; }
+    .cr-key { font-size: 12px; letter-spacing: .16em; color: #c2b8a6; }
+    .cr-picker { display: flex; align-items: center; gap: 14px; }
+    .cr-arrow { font: inherit; font-size: 13px; color: var(--ink); background: none;
+      border: 1px solid rgba(232,162,75,.34); border-radius: 3px; width: 28px; height: 26px;
+      cursor: pointer; line-height: 1; }
+    .cr-arrow:hover { background: rgba(232,162,75,.14); }
+    .cr-val { min-width: 132px; text-align: center; font-size: 12px; letter-spacing: .12em;
+      text-transform: uppercase; color: var(--amber); }
+    .cr-tg { font: inherit; font-size: 11px; letter-spacing: .12em; color: #9a8f80;
+      background: rgba(0,0,0,.25); border: 1px solid rgba(232,162,75,.3); border-radius: 3px;
+      width: 56px; height: 26px; cursor: pointer; }
+    .cr-tg.on { color: var(--charcoal); background: var(--amber); border-color: var(--amber); }
+    .cr-skills { margin-top: 4px; display: flex; flex-direction: column; gap: 10px; }
+    .cr-skills-head { font-size: 12px; letter-spacing: .16em; color: #c2b8a6; }
+    .cr-skills-head span { color: var(--amber); }
+    .cr-skill { display: grid; grid-template-columns: 1fr 26px auto 26px; align-items: center; gap: 10px; }
+    .cr-skill-id { display: flex; flex-direction: column; }
+    .cr-skill-id b { font-size: 12px; letter-spacing: .12em; font-weight: 400; color: var(--accent); }
+    .cr-skill-id span { font-size: 10px; letter-spacing: .06em; color: #7c7468; }
+    .cr-step { font: inherit; font-size: 15px; color: var(--ink); background: rgba(0,0,0,.25);
+      border: 1px solid rgba(232,162,75,.28); border-radius: 3px; width: 26px; height: 26px;
+      cursor: pointer; line-height: 1; }
+    .cr-step:hover { background: rgba(232,162,75,.14); }
+    .cr-pips { display: flex; gap: 4px; }
+    .cr-pips i { width: 13px; height: 13px; border-radius: 2px; background: rgba(236,231,218,.1);
+      border: 1px solid rgba(236,231,218,.14); }
+    .cr-pips i.on { background: var(--accent); border-color: var(--accent);
+      box-shadow: 0 0 7px -2px var(--accent); }
+    .cr-frame footer { margin-top: 20px; display: flex; align-items: center;
+      justify-content: flex-end; gap: 18px; }
+    .cr-hint { font-size: 11px; letter-spacing: .08em; color: #9a8f80; text-transform: uppercase; }
+    .cr-enter { font: inherit; font-size: 13px; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--charcoal); background: var(--amber); border: 1px solid var(--amber);
+      border-radius: 3px; padding: 11px 20px; cursor: pointer; }
+    .cr-enter:disabled { color: #6f6557; background: rgba(232,162,75,.12);
+      border-color: rgba(232,162,75,.2); cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -69,7 +137,9 @@
     move <b>mouse</b> · filter <b>mouse Y</b> / <b>↑ ↓</b> · all in A minor
   </div>
   <button id="cam-btn" data-on="false">enable camera</button>
+  <button id="edit-btn">producer</button>
   <div id="vst"></div>
+  <div id="creator"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

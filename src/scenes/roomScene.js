@@ -15,6 +15,7 @@ import { ZONES, ZONE_BY_ID } from '../zones.js';
 import { PAL } from '../art/palette.js';
 import { makeHeroCanvas } from '../art/heroSprites.js';
 import { makeMonitor, makeRug, makeConsole } from '../art/propSprites.js';
+import { makeAvatarCanvas } from '../art/avatarSprites.js';
 
 const hex = (s) => parseInt(s.slice(1), 16);
 
@@ -55,7 +56,7 @@ export class RoomScene extends Phaser.Scene {
     this.#drawVignette();
 
     this.cursor = this.add.circle(W / 2, H / 2, 5, hex(PAL.bulb), 0.95)
-      .setStrokeStyle(1, hex(PAL.keyWhite), 0.6);
+      .setStrokeStyle(1, hex(PAL.keyWhite), 0.6).setDepth(10);
 
     // soft front-of-floor falloff into the dark
     this.add.rectangle(W / 2, H, W, 90, hex(PAL.charcoal), 0.55).setOrigin(0.5, 1);
@@ -192,7 +193,20 @@ export class RoomScene extends Phaser.Scene {
       g.fillStyle = grd; g.fillRect(0, 0, W, H);
       this.textures.addCanvas('vignette', cv);
     }
-    this.add.image(W / 2, H / 2, 'vignette').setOrigin(0.5);
+    this.add.image(W / 2, H / 2, 'vignette').setOrigin(0.5).setDepth(6);
+  }
+
+  // place (or replace) the composed producer avatar, centred on the rug
+  showAvatar(ch) {
+    if (this.avatar) this.avatar.destroy();
+    if (this.avatarShadow) this.avatarShadow.destroy();
+    if (this.textures.exists('avatar')) this.textures.remove('avatar');
+    this.textures.addCanvas('avatar', makeAvatarCanvas(ch));
+    const p = this.#px({ x: 0.5, y: 0.68 });
+    this.avatarShadow = this.add.ellipse(p.x, p.y + 8, 80, 22, hex(PAL.charcoal), 0.42)
+      .setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(2);
+    this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(2.2).setDepth(3);
+    this.character = ch;
   }
 
   #drawBulbs() {
