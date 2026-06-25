@@ -14,6 +14,7 @@
     TRIGGER(id)               toggle a zone's quantized loop
     MODULATE(param, value)    continuous control, value 0..1 (e.g. 'filter')
     MOVE(x, y)                cursor / avatar position, normalised 0..1
+    BEAT(step)                transport 16th-note tick (the engine is the clock)
 */
 
 export const Intent = {
@@ -24,6 +25,7 @@ export const Intent = {
   MOVE: 'MOVE',
   OPEN: 'OPEN',   // zoom into an instrument's fullscreen VST panel
   CLOSE: 'CLOSE', // back to the room
+  BEAT: 'BEAT',   // transport tick (0..15) so the room can pulse to the music
 };
 
 class IntentBus {

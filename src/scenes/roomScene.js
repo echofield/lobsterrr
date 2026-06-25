@@ -66,6 +66,7 @@ export class RoomScene extends Phaser.Scene {
     bus.on(Intent.ZONE_EXIT, (id) => this.#hover(id, false));
     bus.on(Intent.TRIGGER, (id) => this.#pulse(id));
     bus.on(Intent.MODULATE, (param, v) => { if (param === 'filter') this.#light(v); });
+    bus.on(Intent.BEAT, (i) => this.#onBeat(i));
 
     // arrow keys walk the producer around the floor (set up here, used in update)
     this.cursors = this.input.keyboard.createCursorKeys();
@@ -390,5 +391,22 @@ export class RoomScene extends Phaser.Scene {
 
   #light(v) {
     if (this.rim) this.rim.setAlpha(0.05 + v * 0.32);
+  }
+
+  // pump the room on the kick: producer bounces, active gear flares, bulbs pulse
+  #onBeat(i) {
+    if ((i % 4) !== 0) return; // react on the quarter-note kick
+    const actives = Object.values(this.markers).filter((m) => m.ring.getData('on'));
+    if (actives.length === 0) return; // only when something is playing
+
+    if (this.avatar) {
+      this.tweens.add({ targets: this.avatar, scaleY: 1.6, duration: 80, yoyo: true, ease: 'Quad.out' });
+    }
+    for (const m of actives) {
+      this.tweens.add({ targets: m.spot, alpha: 0.8, duration: 90, yoyo: true, ease: 'Quad.out' });
+    }
+    for (const halo of this.bulbs || []) {
+      this.tweens.add({ targets: halo, alpha: 0.3, duration: 90, yoyo: true, ease: 'Quad.out' });
+    }
   }
 }

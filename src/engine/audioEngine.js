@@ -14,6 +14,7 @@
 */
 
 import * as Tone from 'tone';
+import { bus, Intent } from '../intentBus.js';
 
 // A natural minor: A C D E F G. Voicings chosen to stay consonant when layered.
 const CHORDS = [
@@ -86,6 +87,8 @@ export class AudioEngine {
     this.#gate('nine09', drumMix);
     this.loops['nine09'] = new Tone.Sequence((time, i) => {
       this.curStep = i; // playhead for the VST panel
+      // the engine owns the transport, so it is the room's clock: broadcast the tick
+      Tone.Draw.schedule(() => bus.emit(Intent.BEAT, i), time);
       if (this.pattern.kick[i]) kick.triggerAttackRelease('C1', '8n', time);
       if (this.pattern.snare[i]) snare.triggerAttackRelease('16n', time);
       if (this.pattern.hat[i]) hat.triggerAttackRelease('32n', time);
