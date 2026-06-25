@@ -66,22 +66,39 @@ export function makeConsole() {
   const { c, ctx } = makeCanvas(W, H);
   const box = (x, y, z, w, d, h, t, r, f) => isoBox(ctx, OX, OY, S, x, y, z, w, d, h, t, r, f);
   const tile = (x, y, z, w, d, col) => isoTile(ctx, OX, OY, S, x, y, z, w, d, col);
-  glow(ctx, OX, OY - 24, 40, PAL.bulb, 0.06);
-  isoTile(ctx, OX, OY, S, -7.4, -2.4, 0, 14.8, 4.8, PAL.woodLo); // contact shadow
+  const wash = (x, y, z, w, d, col, a) => { ctx.save(); ctx.globalAlpha = a; tile(x, y, z, w, d, col); ctx.restore(); };
+  // a real raised knob: dark cap with a small colour indicator + tungsten catch
+  const knob = (x, y, z, accent) => {
+    box(x, y, z, 0.42, 0.42, 0.3, PAL.blackHi, PAL.black, PAL.blackLo);
+    tile(x + 0.1, y + 0.08, z + 0.3, 0.22, 0.18, accent);
+    wash(x + 0.12, y + 0.1, z + 0.31, 0.12, 0.1, PAL.bulbHot, 0.6);
+  };
+
+  glow(ctx, OX, OY - 24, 44, PAL.bulb, 0.07);
+  isoTile(ctx, OX, OY, S, -7.4, -2.4, 0, 14.8, 4.8, PAL.woodLo);   // contact shadow
   box(-7, -2, 0, 14, 4, 1.5, PAL.blackHi, PAL.black, PAL.blackLo); // desk body
   tile(-6.7, -1.7, 1.52, 13.4, 3.4, PAL.silver);                  // brushed top
-  // meter bridge across the back, with VU windows
+  wash(-6.7, -1.7, 1.53, 13.4, 3.4, PAL.bulbHot, 0.08);           // warm sheen
+  wash(-6.7, -1.7, 1.54, 13.4, 0.16, PAL.bulb, 0.4);              // back-edge rim
+
+  // meter bridge across the back — amber-backlit VU windows with needles
   box(-7, -2, 1.5, 14, 0.7, 1.3, '#52585a', '#3a3f41', PAL.blackLo);
-  for (let i = 0; i < 7; i++) tile(-6.4 + i * 1.95, -1.85, 2.82, 1.4, 0.5, PAL.creamHi);
-  // channel strips: knob columns + fader
+  for (let i = 0; i < 7; i++) {
+    const mx = -6.4 + i * 1.95;
+    tile(mx, -1.85, 2.82, 1.4, 0.5, PAL.creamHi);
+    wash(mx + 0.12, -1.8, 2.83, 1.16, 0.4, PAL.ledAmber, 0.22);   // backlight
+    tile(mx + 0.66, -1.78, 2.84, 0.05, 0.34, '#3a2a1a');          // needle
+  }
+
+  // channel strips: dark raised knobs (red/silver/blue/yellow caps) + recessed fader
   for (let i = 0; i < 9; i++) {
     const cx = -6.3 + i * 1.45;
-    tile(cx, -1.2, 1.54, 0.42, 0.42, PAL.red);    // red collar knob
-    tile(cx, -0.5, 1.54, 0.34, 0.34, PAL.silverHi);
-    tile(cx, 0.2, 1.54, 0.34, 0.34, PAL.blue);    // blue knob
-    tile(cx, 0.9, 1.54, 0.34, 0.34, PAL.yellow);  // yellow knob
-    tile(cx - 0.12, 1.5, 1.54, 0.5, 1.0, '#15110e'); // fader slot
-    tile(cx - 0.1, 1.8, 1.55, 0.42, 0.28, PAL.creamHi); // fader cap
+    knob(cx, -1.2, 1.52, PAL.red);
+    knob(cx, -0.5, 1.52, PAL.silverHi);
+    knob(cx, 0.2, 1.52, PAL.blue);
+    knob(cx, 0.9, 1.52, PAL.yellow);
+    wash(cx - 0.06, 1.45, 1.53, 0.52, 1.05, PAL.charcoal, 0.5);   // recessed fader slot
+    box(cx - 0.08, 1.74, 1.52, 0.44, 0.3, 0.12, PAL.creamHi, PAL.cream, PAL.creamLo); // fader cap
   }
   return c;
 }

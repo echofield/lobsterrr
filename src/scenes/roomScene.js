@@ -52,6 +52,8 @@ export class RoomScene extends Phaser.Scene {
 
     for (const z of ZONES) this.#drawZone(z);
 
+    this.#drawVignette();
+
     this.cursor = this.add.circle(W / 2, H / 2, 5, hex(PAL.bulb), 0.95)
       .setStrokeStyle(1, hex(PAL.keyWhite), 0.6);
 
@@ -175,6 +177,22 @@ export class RoomScene extends Phaser.Scene {
   #contactShadow(x, y, rx, ry) {
     this.add.ellipse(x, y + 6, rx, ry, hex(PAL.charcoal), 0.4)
       .setBlendMode(Phaser.BlendModes.MULTIPLY);
+  }
+
+  // tungsten vignette — keeps the warm centre lit and sinks the edges into shadow
+  #drawVignette() {
+    const { W, H } = this;
+    if (!this.textures.exists('vignette')) {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const g = cv.getContext('2d');
+      const grd = g.createRadialGradient(W / 2, H * 0.46, H * 0.24, W / 2, H * 0.52, H * 0.92);
+      grd.addColorStop(0, 'rgba(7,4,3,0)');
+      grd.addColorStop(0.68, 'rgba(7,4,3,0)');
+      grd.addColorStop(1, 'rgba(7,4,3,0.62)');
+      g.fillStyle = grd; g.fillRect(0, 0, W, H);
+      this.textures.addCanvas('vignette', cv);
+    }
+    this.add.image(W / 2, H / 2, 'vignette').setOrigin(0.5);
   }
 
   #drawBulbs() {
