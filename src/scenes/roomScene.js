@@ -304,7 +304,9 @@ export class RoomScene extends Phaser.Scene {
     const m = this.markers[id]; if (!m) return;
     m.keyTag.setAlpha(on ? 1 : 0.55);
     m.label.setColor(on ? '#ffe6a8' : '#c9bca8');
-    m.hero.setScale(on ? m.baseScale * 1.055 : m.baseScale);
+    m.hero.setScale(on ? m.baseScale * 1.06 : m.baseScale);
+    // selection preview glow (don't fight an already-playing loop bloom)
+    if (!m.ring.getData('on')) this.tweens.add({ targets: m.spot, alpha: on ? 0.2 : 0, duration: 180 });
   }
 
   #pulse(id) {
