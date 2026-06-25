@@ -221,6 +221,19 @@ export class RoomScene extends Phaser.Scene {
     this.add.image(W / 2, H / 2, 'vignette').setOrigin(0.5).setDepth(6);
   }
 
+  // soft round light, tinted per zone, that blooms under a playing instrument
+  #ensureSpot() {
+    if (this.textures.exists('spot')) return;
+    const s = 256, cv = document.createElement('canvas'); cv.width = cv.height = s;
+    const g = cv.getContext('2d');
+    const grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    grd.addColorStop(0, 'rgba(255,255,255,0.95)');
+    grd.addColorStop(0.4, 'rgba(255,255,255,0.32)');
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = grd; g.fillRect(0, 0, s, s);
+    this.textures.addCanvas('spot', cv);
+  }
+
   // place (or replace) the composed producer avatar, centred on the rug
   showAvatar(ch) {
     if (this.avatar) this.avatar.destroy();
@@ -230,7 +243,7 @@ export class RoomScene extends Phaser.Scene {
     const p = this.#px({ x: 0.5, y: 0.68 });
     this.avatarShadow = this.add.ellipse(p.x, p.y + 8, 80, 22, hex(PAL.charcoal), 0.42)
       .setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(2);
-    this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(1.8).setDepth(3);
+    this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(1.8).setDepth(5);
     this.character = ch;
     // gentle idle breathing so the producer feels alive on the stage
     this.tweens.add({
@@ -259,6 +272,11 @@ export class RoomScene extends Phaser.Scene {
 
     this.#contactShadow(x, y + 4, 78, 22);
 
+    // per-zone spotlight (blooms when the loop is playing)
+    this.#ensureSpot();
+    const spot = this.add.image(x, y - 6, 'spot').setTint(z.color).setAlpha(0)
+      .setBlendMode(Phaser.BlendModes.ADD).setScale(1.15).setDepth(5);
+
     // prefer the rendered Blender sprite; fall back to the code-drawn canvas hero
     const spriteKey = `sprite-${z.id}`;
     const usePng = this.textures.exists(spriteKey);
@@ -279,7 +297,7 @@ export class RoomScene extends Phaser.Scene {
       fontFamily: 'Courier New, monospace', fontSize: '13px', color: '#ece6d6',
     }).setOrigin(0.5, 1).setAlpha(0.55);
 
-    this.markers[z.id] = { hero, ring, label, keyTag, base: { x, y }, baseScale };
+    this.markers[z.id] = { hero, ring, label, keyTag, spot, base: { x, y }, baseScale };
   }
 
   #hover(id, on) {
@@ -297,7 +315,20 @@ export class RoomScene extends Phaser.Scene {
     m.ring.setStrokeStyle(2, z.color, nowOn ? 0.9 : 0);
     const pop = m.baseScale * 1.106;
     this.tweens.add({ targets: m.hero, scaleX: pop, scaleY: pop, yoyo: true, duration: 120, ease: 'Quad.out' });
+    // bloom (or fade) the instrument's spotlight to match the loop state
+    this.tweens.add({ targets: m.spot, alpha: nowOn ? 0.5 : 0, duration: 320, ease: 'Quad.out' });
+    this.#dimStage();
     if (nowOn) this.#spinRing(id);
+  }
+
+  // lift the stage dim while anything is playing so active spots read as light
+  #dimStage() {
+    const anyOn = Object.values(this.markers).some((m) => m.ring.getData('on'));
+    if (!this.stageDim) {
+      this.stageDim = this.add.rectangle(this.W / 2, this.H / 2, this.W, this.H, hex(PAL.charcoal), 0)
+        .setDepth(4);
+    }
+    this.tweens.add({ targets: this.stageDim, alpha: anyOn ? 0.22 : 0, duration: 320, ease: 'Quad.out' });
   }
 
   #spinRing(id) {

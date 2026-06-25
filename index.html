@@ -128,8 +128,10 @@
     .cr-enter:disabled { color: #6f6557; background: rgba(232,162,75,.12);
       border-color: rgba(232,162,75,.2); cursor: not-allowed; }
     /* keyboard / controller focus ring */
-    .cr-on { outline: 1.5px solid rgba(232,162,75,.62); outline-offset: 6px; border-radius: 3px; }
+    .cr-on { outline: 2px solid var(--amber); outline-offset: 6px; border-radius: 3px;
+      background: rgba(232,162,75,.09); box-shadow: 0 0 16px -4px rgba(232,162,75,.5); }
     .cr-skill.cr-on { outline-offset: 8px; }
+    .cr-name.cr-on { background: rgba(232,162,75,.12); }
   </style>
 </head>
 <body>

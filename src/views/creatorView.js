@@ -31,11 +31,12 @@ export class CreatorView {
     this.#build();
     this.root.classList.add('on');
     this.#setFocus(0);
-    window.addEventListener('keydown', this.boundKey);
+    // capture phase so the creator owns the keyboard while open (beats Phaser etc.)
+    window.addEventListener('keydown', this.boundKey, true);
   }
 
   close() {
-    window.removeEventListener('keydown', this.boundKey);
+    window.removeEventListener('keydown', this.boundKey, true);
     this.root.classList.remove('on');
     this.root.innerHTML = '';
     this.rows = [];
@@ -187,20 +188,21 @@ export class CreatorView {
   #move(d) { this.#setFocus(this.focus + d); }
 
   #onKey(e) {
-    if (!this.rows.length) return;
+    if (!this.rows.length || !this.root.classList.contains('on')) return;
     const r = this.rows[this.focus];
-    switch (e.code) {
-      case 'ArrowDown': this.#move(1); e.preventDefault(); break;
-      case 'ArrowUp': this.#move(-1); e.preventDefault(); break;
-      case 'ArrowRight': if (r.name) return; r.right?.(); e.preventDefault(); break;
-      case 'ArrowLeft': if (r.name) return; r.left?.(); e.preventDefault(); break;
+    const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+    switch (e.key) {
+      case 'ArrowDown': this.#move(1); stop(); break;
+      case 'ArrowUp': this.#move(-1); stop(); break;
+      case 'ArrowRight': if (r.name) return; r.right?.(); stop(); break;
+      case 'ArrowLeft': if (r.name) return; r.left?.(); stop(); break;
       case 'Enter':
         if (r.name) this.#setFocus(this.rows.length - 1);
         else (r.enter || r.right)?.();
-        e.preventDefault(); break;
-      case 'Space':
+        stop(); break;
+      case ' ': case 'Spacebar':
         if (r.name) return;
-        if (r.enter) { r.enter(); e.preventDefault(); }
+        if (r.enter) { r.enter(); stop(); }
         break;
       default: break;
     }
