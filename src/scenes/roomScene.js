@@ -66,6 +66,11 @@ export class RoomScene extends Phaser.Scene {
     bus.on(Intent.ZONE_EXIT, (id) => this.#hover(id, false));
     bus.on(Intent.TRIGGER, (id) => this.#pulse(id));
     bus.on(Intent.MODULATE, (param, v) => { if (param === 'filter') this.#light(v); });
+
+    // arrow keys walk the producer around the floor (set up here, used in update)
+    this.cursors = this.input.keyboard.createCursorKeys();
+    this.avatarPos = { x: 0.5, y: 0.66 };
+    this.nearZone = null;
   }
 
   #px(n) { return { x: n.x * this.W, y: n.y * this.H }; }
@@ -240,15 +245,57 @@ export class RoomScene extends Phaser.Scene {
     if (this.avatarShadow) this.avatarShadow.destroy();
     if (this.textures.exists('avatar')) this.textures.remove('avatar');
     this.textures.addCanvas('avatar', makeAvatarCanvas(ch));
-    const p = this.#px({ x: 0.5, y: 0.68 });
+    if (!this.avatarPos) this.avatarPos = { x: 0.5, y: 0.66 };
+    const p = this.#px(this.avatarPos);
     this.avatarShadow = this.add.ellipse(p.x, p.y + 8, 80, 22, hex(PAL.charcoal), 0.42)
       .setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(2);
     this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(1.8).setDepth(5);
     this.character = ch;
-    // gentle idle breathing so the producer feels alive on the stage
-    this.tweens.add({
-      targets: this.avatar, y: p.y - 4, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.inOut',
-    });
+  }
+
+  // keep the producer inside the floor diamond
+  #onFloor(x, y) { return Math.abs(x - 0.5) / 0.44 + Math.abs(y - 0.6) / 0.3 <= 1; }
+
+  // light up the nearest instrument the producer is standing by
+  #proximity() {
+    let near = null, best = 0.16;
+    for (const z of ZONES) {
+      const d = Math.hypot(this.avatarPos.x - z.at.x, this.avatarPos.y - z.at.y);
+      if (d < best) { best = d; near = z.id; }
+    }
+    if (near !== this.nearZone) {
+      if (this.nearZone) bus.emit(Intent.ZONE_EXIT, this.nearZone);
+      if (near) bus.emit(Intent.ZONE_ENTER, near);
+      this.nearZone = near;
+    }
+  }
+
+  update(time) {
+    if (!this.avatar) return;
+    const modal = document.getElementById('creator')?.classList.contains('on')
+      || document.getElementById('vst')?.classList.contains('on');
+    let moving = false;
+    if (!modal && this.cursors) {
+      const sp = 0.006;
+      const dx = (this.cursors.right.isDown ? 1 : 0) - (this.cursors.left.isDown ? 1 : 0);
+      const dy = (this.cursors.down.isDown ? 1 : 0) - (this.cursors.up.isDown ? 1 : 0);
+      if (dx || dy) {
+        const len = Math.hypot(dx, dy) || 1;
+        const nx = this.avatarPos.x + (dx / len) * sp;
+        const ny = this.avatarPos.y + (dy / len) * sp;
+        if (this.#onFloor(nx, ny)) { this.avatarPos.x = nx; this.avatarPos.y = ny; moving = true; }
+        else { // slide along the edge instead of sticking
+          if (this.#onFloor(nx, this.avatarPos.y)) { this.avatarPos.x = nx; moving = true; }
+          if (this.#onFloor(this.avatarPos.x, ny)) { this.avatarPos.y = ny; moving = true; }
+        }
+        if (dx) this.avatar.setFlipX(dx < 0);
+      }
+      this.#proximity();
+    }
+    const p = this.#px(this.avatarPos);
+    const bob = moving ? Math.abs(Math.sin(time * 0.017)) * 4 : Math.sin(time * 0.0028) * 1.4 + 1.4;
+    this.avatar.setPosition(p.x, p.y - bob);
+    this.avatarShadow.setPosition(p.x, p.y + 8).setScale(moving ? 0.96 : 1);
   }
 
   #drawBulbs() {
