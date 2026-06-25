@@ -102,6 +102,20 @@ export class RoomScene extends Phaser.Scene {
       g.fillRect(panelX + i * bw + bw - 2, panelY, 2, panelH);
     }
 
+    // faint vertical wood panelling across both walls (kills the flat-fill look)
+    const panel = (x0, y0, x1, y1, n) => {
+      for (let k = 1; k < n; k++) {
+        const t = k / n;
+        const bx = x0 + (x1 - x0) * t, by = y0 + (y1 - y0) * t;
+        g.lineStyle(1, hex(PAL.wallLo), 0.32);
+        g.beginPath(); g.moveTo(bx, by); g.lineTo(bx, by - up); g.strokePath();
+        g.lineStyle(1, hex(PAL.wallHi), 0.10);
+        g.beginPath(); g.moveTo(bx + 1, by); g.lineTo(bx + 1, by - up); g.strokePath();
+      }
+    };
+    panel(Tx, Ty, Lx, Ly, 12);
+    panel(Tx, Ty, Rx, Ry, 12);
+
     this.#drawCeiling();
   }
 
@@ -130,29 +144,40 @@ export class RoomScene extends Phaser.Scene {
     const diamond = (g) => { g.beginPath(); g.moveTo(Tx, Ty); g.lineTo(Rx, Ly); g.lineTo(Bx, By); g.lineTo(Lx, Ly); g.closePath(); };
 
     const underlay = this.add.graphics();
-    underlay.fillStyle(hex(PAL.wood), 1); diamond(underlay); underlay.fillPath();
+    underlay.fillStyle(hex(PAL.woodLo), 1); diamond(underlay); underlay.fillPath();
 
     const tiles = this.add.graphics();
     const tw = 64, th = 32, N = 18;
+    // warm light centre (under the bulbs) — baked into the boards, stepped not smooth
+    const lcx = Tx, lcy = Ty + halfH * 0.5, maxD = halfW * 0.95;
+    const oak = ['#7a5226', '#875b2c', '#6d4920', '#7f5528']; // varied boards, not a checker
     for (let i = 0; i <= N; i++) {
       for (let j = 0; j <= N; j++) {
         const cx = Tx + (i - j) * (tw / 2);
         const cy = Ty + (i + j) * (th / 2);
-        tiles.fillStyle((i + j) % 2 ? hex(PAL.woodHi) : hex(PAL.wood), 1);
+        const face = () => {
+          tiles.beginPath();
+          tiles.moveTo(cx, cy - th / 2); tiles.lineTo(cx + tw / 2, cy);
+          tiles.lineTo(cx, cy + th / 2); tiles.lineTo(cx - tw / 2, cy);
+          tiles.closePath(); tiles.fillPath();
+        };
+        // board tone: bands along (i+j) + deterministic grain noise → oak, not tile
+        const noise = Math.abs(Math.sin(i * 12.9898 + j * 4.1414));
+        tiles.fillStyle(hex(oak[((i + j) + (noise > 0.66 ? 1 : 0)) % oak.length]), 1); face();
+        // baked light: warm toward the centre, sink the edges
+        const d = Math.min(1, Math.hypot(cx - lcx, cy - lcy) / maxD);
+        if (d < 0.85) { tiles.fillStyle(hex(PAL.bulb), (1 - d) * 0.16); face(); }
+        if (d > 0.42) { tiles.fillStyle(hex(PAL.charcoal), (d - 0.42) * 0.62); face(); }
+        // board seam — only the front V, so it reads as planks not a grid
+        tiles.lineStyle(1, hex(PAL.grout), 0.32);
         tiles.beginPath();
-        tiles.moveTo(cx, cy - th / 2); tiles.lineTo(cx + tw / 2, cy);
-        tiles.lineTo(cx, cy + th / 2); tiles.lineTo(cx - tw / 2, cy);
-        tiles.closePath(); tiles.fillPath();
-        tiles.lineStyle(1, hex(PAL.grout), 0.45); tiles.strokePath();
+        tiles.moveTo(cx - tw / 2, cy); tiles.lineTo(cx, cy + th / 2); tiles.lineTo(cx + tw / 2, cy);
+        tiles.strokePath();
       }
     }
     const maskG = this.make.graphics({ x: 0, y: 0 });
     maskG.fillStyle(0xffffff); diamond(maskG); maskG.fillPath();
     tiles.setMask(maskG.createGeometryMask());
-
-    // warm light pool spilling onto the back of the floor
-    this.add.circle(Tx, Ty + halfH * 0.7, halfW * 0.7, hex(PAL.bulb), 0.06)
-      .setBlendMode(Phaser.BlendModes.ADD);
   }
 
   #drawProps() {
@@ -207,6 +232,10 @@ export class RoomScene extends Phaser.Scene {
       .setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(2);
     this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(1.8).setDepth(3);
     this.character = ch;
+    // gentle idle breathing so the producer feels alive on the stage
+    this.tweens.add({
+      targets: this.avatar, y: p.y - 4, duration: 1700, yoyo: true, repeat: -1, ease: 'Sine.inOut',
+    });
   }
 
   #drawBulbs() {
