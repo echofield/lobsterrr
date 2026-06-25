@@ -205,7 +205,7 @@ export class RoomScene extends Phaser.Scene {
     const p = this.#px({ x: 0.5, y: 0.68 });
     this.avatarShadow = this.add.ellipse(p.x, p.y + 8, 80, 22, hex(PAL.charcoal), 0.42)
       .setBlendMode(Phaser.BlendModes.MULTIPLY).setDepth(2);
-    this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(2.2).setDepth(3);
+    this.avatar = this.add.image(p.x, p.y, 'avatar').setOrigin(0.5, 0.92).setScale(1.8).setDepth(3);
     this.character = ch;
   }
 

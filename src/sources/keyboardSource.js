@@ -17,6 +17,11 @@ export function startKeyboardSource() {
   bus.on(Intent.ZONE_ENTER, (id) => { focused = id; });
 
   const onKey = (e) => {
+    // hand the keyboard to modal overlays / text fields instead of the room
+    if (document.getElementById('creator')?.classList.contains('on')) return;
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+
     const zone = ZONE_BY_KEY[e.code];
     if (zone) {
       bus.emit(Intent.TRIGGER, zone.id);

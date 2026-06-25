@@ -3,6 +3,10 @@
   HTML's strength), live iso preview of the composed avatar, RPG skill allocation
   wired to the four instruments. On enter it persists the character and hands it
   back so the room can place the avatar.
+
+  Fully keyboard/controller driven: ↑/↓ move focus, ←/→ change the focused
+  control, Enter selects. (The hand maps onto the same nav later: directional →
+  arrows, pinch → Enter.) Mouse works too.
 */
 
 import {
@@ -16,6 +20,9 @@ export class CreatorView {
     this.root = document.getElementById('creator');
     this.ch = defaultCharacter();
     this.onDone = null;
+    this.rows = [];
+    this.focus = 0;
+    this.boundKey = (e) => this.#onKey(e);
   }
 
   open(existing, onDone) {
@@ -23,16 +30,30 @@ export class CreatorView {
     this.onDone = onDone;
     this.#build();
     this.root.classList.add('on');
+    this.#setFocus(0);
+    window.addEventListener('keydown', this.boundKey);
   }
 
   close() {
+    window.removeEventListener('keydown', this.boundKey);
     this.root.classList.remove('on');
     this.root.innerHTML = '';
+    this.rows = [];
   }
 
+  // ── shared actions (used by both clicks and the keyboard) ──
   #cycle(list, current, dir) {
     const i = list.findIndex((o) => o.key === current);
     return list[(i + dir + list.length) % list.length].key;
+  }
+  #setSpecies(dir) { this.ch.species = this.#cycle(SPECIES, this.ch.species, dir); this.#render(); }
+  #setAccent(dir) { this.ch.accent = this.#cycle(ACCENTS, this.ch.accent, dir); this.#render(); }
+  #toggleHp() { this.ch.headphones = !this.ch.headphones; this.#render(); }
+  #stepSkill(key, dir) {
+    const next = (this.ch.skills[key] || 0) + dir;
+    if (next < 0 || next > SKILL_MAX) return;
+    if (dir > 0 && pointsSpent(this.ch) >= SKILL_POINTS) return;
+    this.ch.skills[key] = next; this.#refresh();
   }
 
   #build() {
@@ -40,7 +61,7 @@ export class CreatorView {
       <div class="cr-frame">
         <header>
           <div class="cr-title">NEW PRODUCER</div>
-          <div class="cr-sub">compose your character · spend your skills · enter the studio</div>
+          <div class="cr-sub">↑ ↓ move · ← → change · enter select</div>
         </header>
         <div class="cr-body">
           <div class="cr-stage">
@@ -50,14 +71,12 @@ export class CreatorView {
           <div class="cr-controls">
             ${this.#pickerHtml('species', 'IDENTITY')}
             ${this.#pickerHtml('accent', 'ACCENT')}
-            <div class="cr-row cr-toggle" data-toggle="headphones">
+            <div class="cr-row cr-toggle">
               <span class="cr-key">HEADPHONES</span>
               <button class="cr-tg" id="cr-hp"></button>
             </div>
-            <div class="cr-skills">
-              <div class="cr-skills-head">SKILLS · <span id="cr-pts"></span> LEFT</div>
-              ${SKILLS.map((s) => this.#skillHtml(s)).join('')}
-            </div>
+            <div class="cr-skills-head">SKILLS · <span id="cr-pts"></span> LEFT</div>
+            ${SKILLS.map((s) => this.#skillHtml(s)).join('')}
           </div>
         </div>
         <footer>
@@ -66,36 +85,34 @@ export class CreatorView {
         </footer>
       </div>`;
 
-    this.$avatar = this.root.querySelector('#cr-avatar');
-    this.$name = this.root.querySelector('#cr-name');
+    const q = (s) => this.root.querySelector(s);
+    const qa = (s) => [...this.root.querySelectorAll(s)];
+
+    this.$avatar = q('#cr-avatar');
+    this.$name = q('#cr-name');
     this.$name.value = this.ch.name || '';
     this.$name.addEventListener('input', () => { this.ch.name = this.$name.value; this.#refresh(); });
 
-    this.root.querySelectorAll('[data-arrow]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const { arrow, pick } = b.dataset;
-        const list = pick === 'species' ? SPECIES : ACCENTS;
-        this.ch[pick] = this.#cycle(list, this.ch[pick], arrow === 'next' ? 1 : -1);
-        this.#render();
-      });
-    });
+    qa('[data-arrow]').forEach((b) => b.addEventListener('click', () => {
+      const dir = b.dataset.arrow === 'next' ? 1 : -1;
+      b.dataset.pick === 'species' ? this.#setSpecies(dir) : this.#setAccent(dir);
+    }));
+    q('#cr-hp').addEventListener('click', () => this.#toggleHp());
+    qa('[data-skill]').forEach((b) => b.addEventListener('click', () =>
+      this.#stepSkill(b.dataset.skill, b.dataset.step === 'up' ? 1 : -1)));
+    q('#cr-enter').addEventListener('click', () => this.#enter());
 
-    this.root.querySelector('#cr-hp').addEventListener('click', () => {
-      this.ch.headphones = !this.ch.headphones; this.#render();
-    });
-
-    this.root.querySelectorAll('[data-skill]').forEach((b) => {
-      b.addEventListener('click', () => {
-        const { skill, step } = b.dataset;
-        const cur = this.ch.skills[skill] || 0;
-        const next = cur + (step === 'up' ? 1 : -1);
-        if (next < 0 || next > SKILL_MAX) return;
-        if (step === 'up' && pointsSpent(this.ch) >= SKILL_POINTS) return;
-        this.ch.skills[skill] = next; this.#refresh();
-      });
-    });
-
-    this.root.querySelector('#cr-enter').addEventListener('click', () => this.#enter());
+    // focusable rows, in nav order
+    const skillRows = qa('.cr-skill');
+    this.rows = [
+      { el: q('[data-pick="species"]'), left: () => this.#setSpecies(-1), right: () => this.#setSpecies(1) },
+      { el: q('[data-pick="accent"]'), left: () => this.#setAccent(-1), right: () => this.#setAccent(1) },
+      { el: q('.cr-toggle'), left: () => this.#toggleHp(), right: () => this.#toggleHp(), enter: () => this.#toggleHp() },
+      ...SKILLS.map((s, i) => ({ el: skillRows[i], left: () => this.#stepSkill(s.key, -1), right: () => this.#stepSkill(s.key, 1) })),
+      { el: this.$name, name: true },
+      { el: q('#cr-enter'), enter: () => this.#enter() },
+    ];
+    this.rows.forEach((r, i) => r.el.addEventListener('mousedown', () => this.#setFocus(i)));
 
     this.#render();
   }
@@ -124,10 +141,9 @@ export class CreatorView {
 
   // full re-render: appearance changed → redraw avatar + values
   #render() {
-    // avatar preview (nearest-neighbour upscaled)
     const cv = makeAvatarCanvas(this.ch);
-    cv.style.width = `${cv.width * 2.6}px`;
-    cv.style.height = `${cv.height * 2.6}px`;
+    cv.style.width = `${cv.width * 2.2}px`;
+    cv.style.height = `${cv.height * 2.2}px`;
     cv.style.imageRendering = 'pixelated';
     this.$avatar.innerHTML = '';
     this.$avatar.appendChild(cv);
@@ -138,8 +154,9 @@ export class CreatorView {
     const acEl = this.root.querySelector('#cr-accent');
     acEl.textContent = ac.label;
     acEl.style.color = ac.hex;
-    this.root.querySelector('#cr-hp').classList.toggle('on', this.ch.headphones);
-    this.root.querySelector('#cr-hp').textContent = this.ch.headphones ? 'ON' : 'OFF';
+    const hp = this.root.querySelector('#cr-hp');
+    hp.classList.toggle('on', this.ch.headphones);
+    hp.textContent = this.ch.headphones ? 'ON' : 'OFF';
 
     this.#refresh();
   }
@@ -150,16 +167,43 @@ export class CreatorView {
     this.root.querySelector('#cr-pts').textContent = left;
     for (const s of SKILLS) {
       const v = this.ch.skills[s.key] || 0;
-      const pips = Array.from({ length: SKILL_MAX }, (_, i) =>
-        `<i class="${i < v ? 'on' : ''}"></i>`).join('');
-      this.root.querySelector(`#cr-pip-${s.key}`).innerHTML = pips;
+      this.root.querySelector(`#cr-pip-${s.key}`).innerHTML =
+        Array.from({ length: SKILL_MAX }, (_, i) => `<i class="${i < v ? 'on' : ''}"></i>`).join('');
     }
     const ready = this.ch.name.trim().length > 0 && left === 0;
-    const btn = this.root.querySelector('#cr-enter');
-    btn.disabled = !ready;
+    this.root.querySelector('#cr-enter').disabled = !ready;
     this.root.querySelector('#cr-hint').textContent =
       left > 0 ? `spend ${left} more point${left > 1 ? 's' : ''}`
-        : !this.ch.name.trim() ? 'name your producer' : 'ready';
+        : !this.ch.name.trim() ? 'name your producer' : 'ready →';
+  }
+
+  // ── focus / keyboard ──
+  #setFocus(i) {
+    this.focus = (i + this.rows.length) % this.rows.length;
+    this.rows.forEach((r, k) => r.el.classList.toggle('cr-on', k === this.focus));
+    const r = this.rows[this.focus];
+    if (r.name) this.$name.focus(); else this.$name.blur();
+  }
+  #move(d) { this.#setFocus(this.focus + d); }
+
+  #onKey(e) {
+    if (!this.rows.length) return;
+    const r = this.rows[this.focus];
+    switch (e.code) {
+      case 'ArrowDown': this.#move(1); e.preventDefault(); break;
+      case 'ArrowUp': this.#move(-1); e.preventDefault(); break;
+      case 'ArrowRight': if (r.name) return; r.right?.(); e.preventDefault(); break;
+      case 'ArrowLeft': if (r.name) return; r.left?.(); e.preventDefault(); break;
+      case 'Enter':
+        if (r.name) this.#setFocus(this.rows.length - 1);
+        else (r.enter || r.right)?.();
+        e.preventDefault(); break;
+      case 'Space':
+        if (r.name) return;
+        if (r.enter) { r.enter(); e.preventDefault(); }
+        break;
+      default: break;
+    }
   }
 
   #enter() {
